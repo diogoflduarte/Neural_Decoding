@@ -136,7 +136,7 @@ def get_spikes_flexible_bins(neural_data, bin_array):
 
     Returns
     -------
-    X: a matrix of size "number of total time bins" x "number of surrounding time bins used for prediction" x "number of neurons"
+    X: a matrix of size "number of total time bins" x "number of time bins used for prediction" x "number of neurons"
         For every time bin, there are the firing rates of all neurons from the specified number of time bins before (and after)
     """
 
@@ -150,19 +150,17 @@ def get_spikes_flexible_bins(neural_data, bin_array):
     bins_before = np.abs(np.min((0, bin_array.min())))
     bins_after  = np.abs(np.max((0, bin_array.max())))
 
-    bins_current = 0 in bins_array
+    bins_current = 0 in bin_array
     bins_span = bins_before + bins_after + bins_current
 
-    #Loop through each time bin, and collect the spikes occurring in surrounding time bins
-    #Note that the first "bins_before" and last "bins_after" rows of X will remain filled with NaNs, since they don't get filled in below.
-    #This is because, for example, we cannot collect 10 time bins of spikes before time bin 8
-    start_idx=0
-    for i in range(num_examples-bins_before-bins_after): #The first bins_before and last bins_after bins don't get filled in
 
-        end_idx=start_idx+surrounding_bins; #The bins of neural data we will be including are between start_idx and end_idx (which will have length "surrounding_bins")
-        X[i+bins_before,:,:] = neural_data[start_idx:end_idx,:] #Put neural data from surrounding bins in X, starting at row "bins_before"
-        start_idx=start_idx+1;
+    for ii in range(num_examples):
 
+        if ii < bins_before:
+            continue
+        if ii >= num_examples-bins_after:
+            break
 
+        X[ii,:,:] = neural_data[bin_array+ii,:]
 
     return X
