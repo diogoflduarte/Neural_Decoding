@@ -164,3 +164,82 @@ def get_spikes_flexible_bins(neural_data, bin_array):
         X[ii,:,:] = neural_data[bin_array+ii,:]
 
     return X
+
+def train_test_validation_splits(X, y, train_valid = (0.2, 0.2), shuffle=True, random_state=None):
+    '''
+    X_train, X_test, X_valid, y_train, y_test, y_valid =
+    train_test_validation_splits(X, y, train_valid = (0.2, 0.2), shuffle=True, random_state=None)
+
+    Splits data and output into training, testing and validation sets
+
+    Parameters
+    ----------
+    X:              data / matrix of predictors, [observations by features]
+    y               output variable(s) [observations by variables]
+    train_valid     [optional] training and validation splits [tuple, default is (0.2, 0.2)]
+    shuffle         [optional] randomly shuffle the data. default is True
+    random_state    [optional] integer for the randomization. Specify for reproducibility. default is None
+
+    Returns
+    -------
+    X_train, X_test, X_valid, y_train, y_test, y_valid
+
+    '''
+
+    train_pct = 1 - train_valid[0]
+    adjusted_valid_pct = train_valid[1] / train_pct
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=train_valid[0],
+                                                        random_state = random_state, shuffle = shuffle)
+    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=adjusted_valid_pct,
+                                                      random_state = random_state, shuffle = shuffle)
+
+    return X_train, X_test, X_valid, y_train, y_test, y_valid
+def train_test_validation_splits_no_overlap(X, y, train_valid = (0.2, 0.2), bins_before=0, bins_after=0):
+    '''
+
+    X_train, X_test, X_valid, y_train, y_test, y_valid =
+    train_test_validation_splits_no_overlap(X, y, train_valid = (0.2, 0.2), bins_before=0, bins_after=0)
+
+    Splits data and output into training, testing and validation sets. If X comes from 'get_spikes_with_history' or
+    if X contains partially overlapping data, past and future overlaps should be of 'bins_before' and 'bins_after',
+    respectively. This function splits the training, testing and validation sets avoiding overlapping
+    IMPORTANT: doesn't support randomization due to the temporal nature of X
+
+    Parameters
+    ----------
+    X               data / matrix of predictors, [observations by features]
+    y               output variable(s) [observations by variables]
+    train_valid     [optional] training and validation splits [tuple, default is (0.2, 0.2)]
+    bins_before     [optional] number of bins / timepoints to the past
+    bins_after      [optional] number of bins / timepoints to the future
+
+    Returns
+    -------
+    X_train, X_test, X_valid, y_train, y_test, y_valid
+    '''
+
+    # adapted from the notebook
+    # https://github.com/KordingLab/Neural_Decoding/blob/master/Examples_all_decoders.ipynb
+
+    training_range =    [0,                                     1-(train_valid[0]+train_valid[1])]
+    testing_range =     [1-(train_valid[0]+train_valid[1]),     1-train_valid[1]]
+    valid_range =       [1-train_valid[1],                      1]
+
+    num_examples = X.shape[0]
+    training_set = np.arange(int(np.round(training_range[0] * num_examples)) + bins_before,
+                             int(np.round(training_range[1] * num_examples)) - bins_after)
+    testing_set = np.arange(int(np.round(testing_range[0] * num_examples)) + bins_before,
+                            int(np.round(testing_range[1] * num_examples)) - bins_after)
+    valid_set = np.arange(int(np.round(valid_range[0] * num_examples)) + bins_before,
+                          int(np.round(valid_range[1] * num_examples)) - bins_after)
+
+    X_train = X[training_set]
+    X_test  = X[testing_set]
+    X_valid = X[valid_set]
+
+    y_train = y[training_set]
+    y_test = y[testing_set]
+    y_valid = y[valid_set]
+
+    return X_train, X_test, X_valid, y_train, y_test, y_valid
